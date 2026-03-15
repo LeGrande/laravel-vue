@@ -46,32 +46,26 @@ flowchart LR
     subgraph Controllers["app/Http/Controllers/Api/"]
         AuthC["AuthController\nlogin, logout, user"]
         UserC["UserController\nindex, store, show, update, destroy"]
-        CompanyC["CompanyController\nindex, store, show, update, destroy"]
     end
 
     subgraph Models["app/Models/"]
         User["User"]
-        Company["Company"]
     end
 
     subgraph Http["app/Http/"]
-        Req["Form Requests\nStore/Update User & Company"]
-        Res["API Resources\nUserResource, CompanyResource"]
+        Req["Form Requests\nStore/Update User"]
+        Res["API Resources\nUserResource"]
     end
 
     ApiR --> AuthC
     ApiR --> UserC
-    ApiR --> CompanyC
     UserC --> User
-    CompanyC --> Company
     UserC --> Req
-    CompanyC --> Req
     UserC --> Res
-    CompanyC --> Res
 ```
 
-- **Controllers**: `AuthController` (login, logout, user), `UserController` and `CompanyController` (apiResource).
-- **Models**: `User` (auth), `Company` (CRUD); no relation between them in the current code.
+- **Controllers**: `AuthController` (login, logout, user), `UserController` (apiResource).
+- **Models**: `User` (auth + CRUD).
 - **Http**: Form Requests for validation; Resources for JSON shaping.
 
 ---
@@ -88,14 +82,12 @@ flowchart TB
     subgraph Protected["Protected (auth:sanctum)"]
         GET_user["GET /api/user"]
         users["/api/users\nindex, store, show, update, destroy"]
-        companies["/api/companies\nindex, store, show, update, destroy"]
     end
 
     POST_login --> AuthController
     POST_logout --> AuthController
     GET_user --> AuthController
     users --> UserController
-    companies --> CompanyController
 ```
 
 ---
@@ -110,7 +102,7 @@ flowchart TB
     end
 
     subgraph Router["router/index.js"]
-        Routes["/ login, /, /users,\n/companies, /leagues,\n/settings"]
+        Routes["/ login, /, /users,\n/leagues, /settings"]
         Guard["beforeEach\nauth + fetchUser"]
     end
 
@@ -122,7 +114,6 @@ flowchart TB
         Login["LoginPage"]
         Dashboard["DashboardPage"]
         Users["UsersPage"]
-        Companies["CompaniesPage"]
         Leagues["LeaguesPage"]
         Settings["SettingsPage"]
     end
@@ -132,13 +123,12 @@ flowchart TB
         Sidebar["Sidebar"]
         CrudHeader["CrudPageHeader"]
         Table["IndexTable, IndexTableRow, IndexTableCell"]
-        Modals["BaseModal, ConfirmModal\nUserFormModal, CompanyFormModal"]
-        Forms["UserForm, CompanyForm\nFormInput, AppButton"]
+        Modals["BaseModal, ConfirmModal\nUserFormModal"]
+        Forms["UserForm\nFormInput, AppButton"]
     end
 
     subgraph Composables["composables/"]
         useUsers["useUsers"]
-        useCompanies["useCompanies"]
         useNavItems["useNavItems"]
     end
 
@@ -150,14 +140,13 @@ flowchart TB
     MainLayout --> Sidebar
     MainLayout --> router_view["<router-view>"]
     Users --> useUsers
-    Companies --> useCompanies
     Sidebar --> useNavItems
 ```
 
 - **App.vue**: Shows loading until router is ready; then either `MainLayout` (authenticated) or `<router-view>` (e.g. login).
 - **Router**: All app routes plus `beforeEach` that runs `fetchUser` once and enforces `requiresAuth` / `requiresGuest`.
 - **Auth**: Pinia `useAuthStore` talks to `/api/login`, `/api/logout`, `/api/user` and drives auth state.
-- **Pages**: One page per main section; Users and Companies use composables for API + UI state.
+- **Pages**: One page per main section; Users uses a composable for API + UI state.
 - **Components**: Shared layout, sidebar, CRUD header, table primitives, modals, and form pieces.
 
 ---
@@ -166,14 +155,14 @@ flowchart TB
 
 ```mermaid
 sequenceDiagram
-    participant Page as UsersPage / CompaniesPage
-    participant Composable as useUsers / useCompanies
+    participant Page as UsersPage
+    participant Composable as useUsers
     participant API as Laravel API
-    participant Controller as *Controller
-    participant Model as User / Company
+    participant Controller as UserController
+    participant Model as User
 
     Page->>Composable: load list / create / update / delete
-    Composable->>API: axios get/post/put/delete /api/users|companies
+    Composable->>API: axios get/post/put/delete /api/users
     API->>API: auth:sanctum
     API->>Controller: method
     Controller->>Model: query / create / update / delete
@@ -190,15 +179,15 @@ sequenceDiagram
 laravel-app/
 ├── app/
 │   ├── Http/
-│   │   ├── Controllers/Api/   → AuthController, UserController, CompanyController
-│   │   ├── Requests/          → Store/Update User & Company
-│   │   └── Resources/         → UserResource, CompanyResource
-│   ├── Models/                → User, Company
+│   │   ├── Controllers/Api/   → AuthController, UserController
+│   │   ├── Requests/          → Store/Update User
+│   │   └── Resources/         → UserResource
+│   ├── Models/                → User
 │   └── Providers/
 ├── bootstrap/app.php          → Web + API routes, statefulApi()
 ├── config/
 ├── database/
-│   ├── migrations/            → users, companies, personal_access_tokens, cache, jobs
+│   ├── migrations/            → users, personal_access_tokens, cache, jobs
 │   ├── factories/
 │   └── seeders/
 ├── public/
@@ -208,14 +197,14 @@ laravel-app/
 │   │   ├── app.js
 │   │   ├── router/index.js
 │   │   ├── stores/useAuthStore.js
-│   │   ├── composables/       → useUsers, useCompanies, useNavItems
-│   │   ├── pages/             → Login, Dashboard, Users, Companies, Leagues, Settings
+│   │   ├── composables/       → useUsers, useNavItems
+│   │   ├── pages/             → Login, Dashboard, Users, Leagues, Settings
 │   │   └── components/        → layout, table, modals, forms
 │   ├── views/app.blade.php    → SPA root view
 │   └── css/
 ├── routes/
 │   ├── web.php                → SPA catch-all
-│   └── api.php                → auth + users + companies
+│   └── api.php                → auth + users
 └── tests/
 ```
 
